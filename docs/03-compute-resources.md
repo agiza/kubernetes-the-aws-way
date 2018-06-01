@@ -27,12 +27,48 @@ The output will be similar to this:
 }
 ``` 
 
-This [cloudformation](https://aws.amazon.com/cloudformation/?nc1=h_ls) stack will create the network architecture described [here](http://templates.cloudonaut.io/en/stable/vpc/) in details.
+This [cloudformation](https://aws.amazon.com/cloudformation/?nc1=h_ls) stack will create the network architecture as described [here](http://templates.cloudonaut.io/en/stable/vpc/) in details.
 
 Architecture: 
 ![Details](http://templates.cloudonaut.io/en/stable/img/vpc-2azs.png)
 
 > The `10.0.0.0/16` IP address range can host up to 65534 instances.
+
+### Alerting Stack
+
+As part of the compute architecture used in this tutorial, will be necessary to create [SNS](https://aws.amazon.com/sns/) stack with topics to be used by some alarms associated with the EC2 instaces:
+
+```
+aws cloudformation create-stack --stack-name kubernetes-the-aws-way-alerting --template-body https://s3-eu-west-1.amazonaws.com/widdix-aws-cf-templates-releases-eu-west-1/stable/operations/alert.yaml
+```
+Output similar to:
+```
+{
+    "StackId": "arn:aws:cloudformation:us-east-1:853412474297:stack/kubernetes-the-aws-way-alerting/35fac140-6538-11e8-b369-500c289032fe"
+}
+```
+
+### EC2 Vault Stack
+Before creating the kubernetes componentes, we will setup a EC2 instance with Vault, that will give support to certifications creation e maintenance. These certificates will be used to establish secure communications between kubernetes architectural components.
+
+To setup the Vault stack
+```
+aws cloudformation create-stack --stack-name kubernetes-the-aws-way-vault --template-body https://s3-eu-west-1.amazonaws.com/widdix-aws-cf-templates-releases-eu-west-1/stable/ec2/ec2-auto-recovery.yaml \
+--parameters ParameterKey=ParentVPCStack,ParameterValue=kubernetes-the-aws-way-vpc \
+ParameterKey=ParentAlertStack,ParameterValue=kubernetes-the-aws-way-alerting \
+ParameterKey=Name,ParameterValue=vault-server \
+ParameterKey=IAMUserSSHAccess,ParameterValue=true \
+ParameterKey=IngressTcpPort1,ParameterValue=22 \
+ParameterKey=IngressTcpPort2,ParameterValue=8200 \
+--capabilities CAPABILITY_IAM
+```
+
+Output:
+```
+{
+    "StackId": "arn:aws:cloudformation:us-east-1:853412474297:stack/kubernetes-the-aws-way-vault/58ac1ab0-653b-11e8-a038-500c2854e035"
+}
+```
 
 ### Firewall Rules
 
