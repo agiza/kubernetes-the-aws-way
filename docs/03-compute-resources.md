@@ -70,6 +70,49 @@ Output:
 }
 ```
 
+### Upload a public key to specific IAM user
+
+The following steps are required to a enable some IAM user to login to the Vault EC2 instance using ssh. Replace the my-user used in the command below for some IAM user. 
+
+Generate a PEM private key
+```
+openssl genrsa -out private.pem 2048
+``` 
+
+Extract a public key in PEM format
+```
+openssl rsa -in private.pem -pubout -outform PEM -out public.pem
+```
+
+Finally, upload your key to a specific IAM user
+```
+export SSH_KEY=`cat public.pem`
+aws iam upload-ssh-public-key --user-name k8s --ssh-public-key-body $SSH_KEY
+```
+
+The output is similar to this
+```
+{
+    "SSHPublicKey": {
+        "UserName": "my-user",
+        "SSHPublicKeyId": "APKAJU65L4EGHKK2H6MA",
+        "Fingerprint": "81:60:cf:f5:3b:db:58:be:3e:41:c5:a8:b0:0f:29:df",
+        "SSHPublicKeyBody": "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAtOwqtQah8o4JWsBLkt5r\nkhgfKoTzbusu5wpsJuTmSi+V8EO+i9iP81L3NfGcc8aH6+mYC55laIOE1LrE8E1e\notTBAYFXGddDJVSij4swnXtba48YRIPCvpNzvSKeYYzSTGi8UFi//xTPGokLIShf\nwqoBu9nuuLT4sOYjP3/HZzqXFsOYvBaIs06QtI78XjZQFTfU66OJy9w8cFd2hCLl\nakmxig5UMR683gXay4iwtJvdjOGslVBbaKCPIfSkSqtvfZU17n8OZXy6PgtTmg75\nzpFMWvl+80URQDWA73S3b7x6y0LESmpfxmrgLTQnKt4UsYa9EagTbOxenK2teIM4\ncwIDAQAB\n-----END PUBLIC KEY-----",
+        "Status": "Active",
+        "UploadDate": "2018-06-02T16:18:46.726Z"
+    }
+}
+```
+### Connecting to the Vault instance
+```
+export IP_ADDRESS=$(aws cloudformation --region us-east-1 describe-stacks --stack-name kubernetes-the-aws-way-vault --query 'Stacks[0].Outputs[?OutputKey==`IPAddress`].OutputValue' --output text)
+
+chmod 400 private.pem
+ssh -i private.pem ec2-user@$IP_ADDRESS
+
+```
+After you update your ssh key to IAM, you should wait for about 10 minutes before trying to login. The vault instance updates its credentials every 10 minutes.
+
 ### Firewall Rules
 
 Create a firewall rule that allows internal communication across all protocols:
